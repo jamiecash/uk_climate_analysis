@@ -1,0 +1,301 @@
+---
+title: "Appendix I - Prepare the Data"
+author: "Jamie Cash"
+date: "2023-07-04"
+output: html_document
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages, include=FALSE}
+library("magrittr")
+library("rvest")
+library("tidyverse")
+```
+
+# Retrieve the data
+
+Weather station data provided by the MET office is provided on their website in txt files. Weather station names and the URL of the data for that station was collected from the MET office website.
+
+```{r get weather stations}
+url <-  "https://www.metoffice.gov.uk/research/climate/maps-and-data/historic-station-data"
+webpage <- read_html(url)
+table_nodes = html_nodes(webpage, "table")
+
+# Get the HTML table
+table <- table_nodes %>% html_table(trim=TRUE) %>% .[[1]]
+
+# Get the links to the data for each station and add to the dataframe, then remove the 'Data' column which only contains the text 'View data'
+station_data <- webpage %>% html_nodes(xpath = "//table//a") %>% html_attr("href")
+table <- cbind(table, station_data)
+table <- subset(table, select = -c(Data))
+
+# Display sample of the weather station names and URL to data
+table %>% select(Name, station_data) %>% head()
+```
+The data for each station was retrieved and collated into a single dataframe.
+
+```{r collate weather station data}
+# Create the dataframe
+columns <- c("year", "month", "max_temp", "min_temp", "rainfall", "station_name")
+data <- data.frame(matrix(nrow = 0, ncol = length(columns))) 
+colnames(data) <- columns
+
+# Get data for all stations and append to data
+num_rows <- nrow(table)
+for (row in 1:num_rows) {
+  # Get the station name and URL of the stations data txt file
+  name <- table[row, "Name"]
+  url <- table[row, "station_data"]
+  
+  # Check the text file to find where the header starts, then remove header row 
+  # and rows prior to header row.
+  header_txt <- "   yyyy  mm   tmax    tmin      af    rain     sun"
+  text <- readLines(url, warn=FALSE)
+  header_row <- which(text==header_txt)
+  text <- text[-(0:header_row+1)]
+  
+  # Remove all data after position 50 from every line. This may contain comments
+  # which we don't want to be parsed. We also need to add the last column if it 
+  # is missing as  some lines are not formatted correctly
+  lines = str_split(text, '\n')
+  clean_text <- ""
+  
+  for(n in 1:length(lines)) {
+    line <- lines[n][[1]] %>% substr(0, 50) 
+    if (line != 'Site Closed' && line != 'Site closed') {
+      if(str_length(line) < 46) {
+        line <- paste(line, ' ---')
+      }
+      clean_text <- paste(clean_text, line, sep='\n')
+    }
+  }
+  
+  clean_text <- clean_text[2:length(clean_text)]
+
+  # Read fixed length text into dataframe and set column names
+  station_data <- data.table::fread(text=clean_text)
+  colnames(station_data) <- 
+    c("year", "month", "max_temp", "min_temp", "af_days", "rainfall", "sun_hours")
+  
+  # Select only columns required for analysis and add station name
+  station_data$station_name <- name
+  station_data <- station_data %>% select(all_of(columns))
+  
+  # Merge into main data frame
+  data <- rbind(data, station_data)
+}
+head(data)
+```
+# Inspect and clean the data
+
+## Year
+
+* Our datatype is int, which is a valid type for year.
+* Do our years fall between 1853 and 2023?
+
+``` {r check year}
+min(data$year)
+max(data$year)
+```
+**Yes. No further action required.**
+
+## Month
+
+* Are our values for month all valid months between 1 and 12?
+* Are all months represented?
+* Is there an even distribution of data across months?
+
+``` {r check month}
+# Get months as str, so that they are discrete for plotting as x axis ticks.
+months = as.character(unique(data$month))
+
+# Plot a chart showing distribution across all month values
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = month)) +
+  labs(title="Distribution of Weather Station Readings by Month", 
+       y = "# Readings") +
+  scale_x_discrete(name ="Month", limits=months)
+```
+
+**Yes. No further action required.**
+
+## Max Temp
+
+* Are all values for max_temp valid numbers?
+* Are our values for max_temp all valid values between -10 and 40?
+
+``` {r check max_temp}
+suppressWarnings(
+  data$max_temp[which(is.na(as.numeric(data$max_temp)))] %>% unique()
+)
+min(data$max_temp)
+max(data$max_temp)
+```
+
+** No. We have some * values at the end of the number, null is represented by ---, and the datatype is string. **
+
+### Steps to clean
+* Remove '*'s
+* Convert '---' to null
+* Convert column to numeric type
+
+``` {r clean max_temp}
+# Remove '*'s
+data$max_temp <- gsub("\\*","",data$max_temp)
+
+# Convert '---' to null
+data$max_temp <- na_if(data$max_temp, '---')
+
+# Convert to double
+data$max_temp <- as.numeric(data$max_temp)
+```
+
+### Recheck
+
+* Are all values for max_temp valid numbers?
+* Are our values for max_temp all valid values between -10 and 40?
+
+``` {r recheck max_temp}
+data$max_temp[which(is.na(as.numeric(data$max_temp)))] %>% unique()
+min(data$max_temp, na.rm=TRUE)
+max(data$max_temp, na.rm=TRUE)
+```
+**Yes. No further action required.**
+
+* Note: The highest temp of 28.3 seemed low, so I checked the MET Office website and confirmed that the max temp isnt the maximum temperature reached in a month, but the maximum average temperature for a day reached in a month. This makes sense and 28.3 now seems in line with expectations.
+
+## Min Temp
+
+* Are all values for min_temp valid numbers?
+* Are our values for min_temp all valid values between -10 and 30?
+
+``` {r check min_temp}
+suppressWarnings(
+  data$min_temp[which(is.na(as.numeric(data$min_temp)))] %>% unique()
+)
+min(data$min_temp)
+max(data$min_temp)
+```
+
+** No. We have some * values at the end of the numbers, null is represented by ---, and the data type is string. **
+
+### Steps to clean
+* Remove '*'s
+* Convert '---' to null
+* Convert column to numeric type
+
+``` {r clean min_temp}
+# Remove '*'s
+data$min_temp <- gsub("\\*","",data$min_temp)
+
+# Convert '---' to null
+data$min_temp <- na_if(data$min_temp, '---')
+
+# Convert to double
+data$min_temp <- as.numeric(data$min_temp)
+```
+
+### Recheck
+
+* Are all our values for min_temp valid numbers?
+* Are our values for min_temp all valid values between -10 and 30?
+
+``` {r recheck min_temp}
+data$min_temp[which(is.na(as.numeric(data$min_temp)))] %>% unique()
+min(data$min_temp, na.rm=TRUE)
+max(data$min_temp, na.rm=TRUE)
+```
+**Yes. No further action required.**
+
+## Rainfall
+
+* Are all values for rainfall valid numbers?
+* Are our values for rainfall all valid values between 0 and 1,000?
+
+``` {r check rainfall}
+suppressWarnings(
+  data$rainfall[which(is.na(as.numeric(data$rainfall)))] %>% unique()
+)
+min(data$rainfall)
+max(data$rainfall)
+```
+
+** No. We have some * values at the end of the numbers, null is represented by ---, and the data type is string. **
+
+### Steps to clean
+* Remove '*'s
+* Convert '---' to null
+* Convert column to numeric type
+
+
+``` {r clean rainfall}
+# Remove '*'s
+data$rainfall <- gsub("\\*","",data$rainfall)
+
+# Convert '---' to null
+data$rainfall <- na_if(data$rainfall, '---')
+
+# Convert to double
+data$rainfall <- as.numeric(data$rainfall)
+```
+
+### Recheck
+
+* Are all values for rainfall valid numbers?
+* Are our values for rainfall all valid values between 0 and 1,000?
+
+``` {r recheck rainfall}
+data$rainfall[which(is.na(as.numeric(data$rainfall)))] %>% unique()
+min(data$rainfall, na.rm=TRUE)
+max(data$rainfall, na.rm=TRUE)
+```
+**Yes. No further action required.**
+
+## Station Name
+
+* Are our values for station_name valid weather station names?
+* Are all stations represented?
+
+Note: We are not expecting an even distribution due to different stations opening in different years.
+
+``` {r check station_name}
+
+# Plot a chart showing distribution across all station names
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = station_name)) +
+  labs(title="Distribution of Weather Station Readings by Station", 
+       y = "# Readings") +
+  scale_x_discrete(name ="Station", limits=unique(data$station_name)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+```
+
+**Yes. No further action required.**
+
+## Merge year and month.
+
+In order to plot timeframe data, it would be helpful to combine year and month into a date type.
+
+``` {r merge year month}
+# Merge
+data <- data %>%
+  mutate(year_month = with(., sprintf("%d-%02d", year, month)))
+
+# Remove year and month
+data <- data %>% select(-c(year, month))
+
+```
+
+## Reorder columns
+
+``` {r final dataset}
+data <- data %>% select(c(station_name, year_month, min_temp, max_temp, rainfall))
+```
+
+## Save prepared data
+``` {r save data}
+write.csv(data, "met_station_readings.csv", row.names=FALSE)
+data
+```

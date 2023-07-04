@@ -1,0 +1,8 @@
+"0","# Remove '*'s"
+"0","data$min_temp <- gsub(""\\*"","""",data$min_temp)"
+"0",""
+"0","# Convert '---' to null"
+"0","data$min_temp <- na_if(data$min_temp, '---')"
+"0",""
+"0","# Convert to double"
+"0","data$min_temp <- as.numeric(data$min_temp)"
