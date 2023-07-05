@@ -1,7 +1,0 @@
-"0","# Merge"
-"0","data <- data %>%"
-"0","  mutate(year_month = with(., sprintf(""%d-%02d"", year, month)))"
-"0",""
-"0","# Remove year and month"
-"0","data <- data %>% select(-c(year, month))"
-"0",""

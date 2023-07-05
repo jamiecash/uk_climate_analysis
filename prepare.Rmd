@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r load packages, include=FALSE}
-library("magrittr")
+library("lubridate")
 library("rvest")
 library("tidyverse")
 ```
@@ -281,7 +281,10 @@ In order to plot timeframe data, it would be helpful to combine year and month i
 ``` {r merge year month}
 # Merge
 data <- data %>%
-  mutate(year_month = with(., sprintf("%d-%02d", year, month)))
+  mutate(year_month = with(., sprintf("%d-%02d-%02d", year, month, 1)))
+
+# Convert to date
+data$year_month <- ymd(data$year_month)
 
 # Remove year and month
 data <- data %>% select(-c(year, month))

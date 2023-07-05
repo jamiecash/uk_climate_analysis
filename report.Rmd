@@ -21,7 +21,7 @@ Living in the UK and remembering childhood winters playing in the snow, it often
 
 My news feeds are filled with unprecedented climate related events such as floods and wildfires around the globe. It certainly *appears* to me like the climate has changed rapidly in recent years. But is this just my perception or is there any evidence of this change?
 
-In order to determine how the climate has changed in the UK since my childhood, this report will analyses the [Met Office Historical Staton Data](https://www.metoffice.gov.uk/research/climate/maps-and-data/historic-station-data) to answer the following questions :
+In order to determine how the climate has changed in the UK since my childhood, this report analyses the [Met Office Historical Staton Data](https://www.metoffice.gov.uk/research/climate/maps-and-data/historic-station-data) to answer the following questions :
 
 ## Have the seasons shifted?
 * Is the average highest temperature for December, January and February across all UK locations for the last 5 years higher than the  historical average?
@@ -40,6 +40,7 @@ In order to determine how the climate has changed in the UK since my childhood, 
 
 # Approach
 1) Data was retrieved from the MET Office website and prepared for analysis. The preparation steps are available in [Appendix I](prepare.html). The prepared data is available [here](met_station_readings.csv).
+2) The prepared data was then processed to create two summary datasets: i) Seasonal high, low, average max and average min temperature across all weather stations by year; and ii) Annual high, low and highest monthly rainfall by station by year. The processing steps are available in [Appendix II](process.html).
 
 
 

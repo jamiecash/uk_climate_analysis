@@ -1,1 +1,0 @@
-"0","data <- data %>% select(c(station_name, year_month, min_temp, max_temp, rainfall))"

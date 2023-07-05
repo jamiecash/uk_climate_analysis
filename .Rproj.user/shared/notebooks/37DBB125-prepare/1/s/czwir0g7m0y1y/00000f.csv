@@ -1,8 +1,0 @@
-"0","# Remove '*'s"
-"0","data$rainfall <- gsub(""\\*"","""",data$rainfall)"
-"0",""
-"0","# Convert '---' to null"
-"0","data$rainfall <- na_if(data$rainfall, '---')"
-"0",""
-"0","# Convert to double"
-"0","data$rainfall <- as.numeric(data$rainfall)"

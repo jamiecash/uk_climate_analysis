@@ -1,8 +1,0 @@
-"0",""
-"0","# Plot a chart showing distribution across all station names"
-"0","ggplot(data = data) +"
-"0","  geom_bar(mapping = aes(x = station_name)) +"
-"0","  labs(title=""Distribution of Weather Station Readings by Station"", "
-"0","       y = ""# Readings"") +"
-"0","  scale_x_discrete(name =""Station"", limits=unique(data$station_name)) +"
-"0","  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))"

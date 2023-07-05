@@ -1,0 +1,71 @@
+---
+title: "Appendix II - Process the Data"
+author: "Jamie Cash"
+date: "2023-07-05"
+output: html_document
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE) 
+```
+
+```{r load packages, include=FALSE}
+library("tidyverse")
+```
+
+# Load the prepared data
+
+Weather station data provided by the MET office is provided on their website in txt files. This data was [prepared](prepare.html) to create a clean dataset which is available [here](met_station_readings.csv). Load this dataset.
+
+```{r load data, errors=FALSE}
+data <- read.csv('met_station_readings.csv', colClasses = 
+                   c("character", "Date", "numeric", "numeric", "numeric"))
+head(data)
+```
+
+# Process the data
+
+## Seasonal temperatures by year
+Summarise the data to create a dataset containing seasonal high, low, average max and average min temperature across all weather stations by year.
+
+```{r seasonal data, errors=FALSE}
+# Add season and year columns
+data <- data %>% 
+  mutate(season = 
+    case_when(
+      month(year_month) %in% c(12, 1, 2) ~ 'Winter',
+      month(year_month) %in% c(3, 4, 5) ~ 'Spring',
+      month(year_month) %in% c(6, 7, 8) ~ 'Summer',
+      month(year_month) %in% c(9, 10, 11) ~ 'Autumn'
+    )
+  )
+
+data$year = year(data$year_month)
+
+# Group data by season and compute summary columns
+seasonal <- data %>%
+  group_by(year, season) %>%
+  summarise(high = max(max_temp), low = min(min_temp), average_max = mean(max_temp), average_min = mean(min_temp)) %>%
+  arrange(year, season)
+
+# Drop NA rows
+seasonal <- na.omit(seasonal)
+
+# Save
+write.csv(seasonal, "seasonal.csv", row.names=FALSE)
+head(seasonal)
+```
+## Seasonal temperatures by year
+Summarise the data to create a dataset containing annual high, low and highest monthly rainfall by station by year.
+
+```{r annual station data, errors=FALSE}
+# Group data by year and station and compute summary columns
+annual_station <- data %>%
+  group_by(year, station_name) %>%
+  summarise(high = max(max_temp), low = min(min_temp), max_monthly_rainfall = max(rainfall)) %>%
+  arrange(year, station_name)
+
+# Save
+write.csv(annual_station, "annual_station.csv", row.names=FALSE)
+head(annual_station)
+```
