@@ -40,7 +40,7 @@ In order to determine how the climate has changed in the UK since my childhood, 
 
 # Approach
 1) Data was retrieved from the MET Office website and prepared for analysis. The preparation steps are available in [Appendix I](prepare.html). The prepared data is available [here](met_station_readings.csv).
-2) The prepared data was then processed to create two summary datasets: i) Seasonal high, low, average max and average min temperature across all weather stations by year; and ii) Annual high, low and highest monthly rainfall by station by year. The processing steps are available in [Appendix II](process.html).
+2) The prepared data was then processed to create two summary datasets: i) Seasonal high, low, average max and average min temperature across all weather stations by year; and ii) Annual high, low and total rainfall by station by year. The processing steps are available in [Appendix II](process.html).
 
 
 

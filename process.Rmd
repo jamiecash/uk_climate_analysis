@@ -46,7 +46,9 @@ data$year = year(data$year_month)
 # Group data by season and compute summary columns
 seasonal <- data %>%
   group_by(year, season) %>%
-  summarise(high = max(max_temp), low = min(min_temp), average_max = mean(max_temp), average_min = mean(min_temp)) %>%
+  summarise(high = max(max_temp), low = min(min_temp), 
+            average_max = mean(max_temp, na.rm=TRUE), 
+            average_min = mean(min_temp, na.rm=TRUE), .groups='keep') %>%
   arrange(year, season)
 
 # Drop NA rows
@@ -58,13 +60,14 @@ head(seasonal)
 ```
 ## Annual temperatures by station
 
-Summarise the data to create a dataset containing annual high, low and highest monthly rainfall by station by year.
+Summarise the data to create a dataset containing annual high, low and total rainfall by station by year.
 
 ```{r annual station data, errors=FALSE}
 # Group data by year and station and compute summary columns
 annual_station <- data %>%
   group_by(year, station_name) %>%
-  summarise(high = max(max_temp), low = min(min_temp), max_monthly_rainfall = max(rainfall)) %>%
+  summarise(high = max(max_temp), low = min(min_temp), 
+            total_rainfall = sum(rainfall, na.rm=TRUE), .groups='keep') %>%
   arrange(year, station_name)
 
 head(annual_station)

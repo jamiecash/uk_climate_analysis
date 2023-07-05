@@ -396,7 +396,9 @@ data$year = year(data$year_month)
 # Group data by season and compute summary columns
 seasonal &lt;- data %&gt;%
   group_by(year, season) %&gt;%
-  summarise(high = max(max_temp), low = min(min_temp), average_max = mean(max_temp), average_min = mean(min_temp)) %&gt;%
+  summarise(high = max(max_temp), low = min(min_temp), 
+            average_max = mean(max_temp, na.rm=TRUE), 
+            average_min = mean(min_temp, na.rm=TRUE), .groups=&#39;keep&#39;) %&gt;%
   arrange(year, season)
 
 # Drop NA rows
@@ -406,7 +408,7 @@ seasonal &lt;- na.omit(seasonal)
 write.csv(seasonal, &quot;seasonal_summary.csv&quot;, row.names=FALSE)
 head(seasonal)</code></pre>
 <pre><code>## # A tibble: 6 × 6
-## # Groups:   year [2]
+## # Groups:   year, season [6]
 ##    year season  high   low average_max average_min
 ##   &lt;dbl&gt; &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
 ## 1  1865 Autumn  22.6   3.1       15.6         7.5 
@@ -419,24 +421,25 @@ head(seasonal)</code></pre>
 <div id="annual-temperatures-by-station" class="section level2">
 <h2>Annual temperatures by station</h2>
 <p>Summarise the data to create a dataset containing annual high, low
-and highest monthly rainfall by station by year.</p>
+and total rainfall by station by year.</p>
 <pre class="r"><code># Group data by year and station and compute summary columns
 annual_station &lt;- data %&gt;%
   group_by(year, station_name) %&gt;%
-  summarise(high = max(max_temp), low = min(min_temp), max_monthly_rainfall = max(rainfall)) %&gt;%
+  summarise(high = max(max_temp), low = min(min_temp), 
+            total_rainfall = sum(rainfall, na.rm=TRUE), .groups=&#39;keep&#39;) %&gt;%
   arrange(year, station_name)
 
 head(annual_station)</code></pre>
 <pre><code>## # A tibble: 6 × 5
-## # Groups:   year [3]
-##    year station_name  high   low max_monthly_rainfall
-##   &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;                &lt;dbl&gt;
-## 1  1853 Armagh        NA    NA                   94.8
-## 2  1853 Oxford        21.2  -1.8                102. 
-## 3  1854 Armagh        NA    NA                  133. 
-## 4  1854 Oxford        21.7   0.6                 82.1
-## 5  1855 Armagh        NA    NA                   83.3
-## 6  1855 Oxford        22.8  -4.5                143.</code></pre>
+## # Groups:   year, station_name [6]
+##    year station_name  high   low total_rainfall
+##   &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1  1853 Armagh        NA    NA             636.
+## 2  1853 Oxford        21.2  -1.8           692 
+## 3  1854 Armagh        NA    NA             837.
+## 4  1854 Oxford        21.7   0.6           450.
+## 5  1855 Armagh        NA    NA             603.
+## 6  1855 Oxford        22.8  -4.5           640.</code></pre>
 <p>Different stations have different data start dates. Some also closed
 prior to 2023. We need to make these consistent as to not affect the
 mean calculations and remove stations that closed prior to 2023.</p>
@@ -454,15 +457,15 @@ max(first_years$first_year)</code></pre>
 
 head(annual_station)</code></pre>
 <pre><code>## # A tibble: 6 × 5
-## # Groups:   year [1]
-##    year station_name         high   low max_monthly_rainfall
-##   &lt;dbl&gt; &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;                &lt;dbl&gt;
-## 1  1978 Aberporth            16.3   1.5                 140 
-## 2  1978 Armagh               18.1   0.4                 166 
-## 3  1978 Ballypatrick Forest  15.6   0.5                  NA 
-## 4  1978 Bradford             17.7  -0.9                 195.
-## 5  1978 Braemar              16.6  -8.4                 191 
-## 6  1978 Camborne             17.5   5                   277.</code></pre>
+## # Groups:   year, station_name [6]
+##    year station_name         high   low total_rainfall
+##   &lt;dbl&gt; &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1  1978 Aberporth            16.3   1.5           735.
+## 2  1978 Armagh               18.1   0.4           774.
+## 3  1978 Ballypatrick Forest  15.6   0.5             0 
+## 4  1978 Bradford             17.7  -0.9           870.
+## 5  1978 Braemar              16.6  -8.4           924.
+## 6  1978 Camborne             17.5   5             380.</code></pre>
 <p>Get stations that closed prior ro 2023.</p>
 <pre class="r"><code>last_years &lt;- annual_station %&gt;% 
   group_by(station_name) %&gt;% 
@@ -493,19 +496,19 @@ Check.</p>
 <pre class="r"><code>annual_station %&gt;% 
   filter(station_name == &#39;Chivenor&#39;)</code></pre>
 <pre><code>## # A tibble: 44 × 5
-## # Groups:   year [44]
-##     year station_name  high   low max_monthly_rainfall
-##    &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;                &lt;dbl&gt;
-##  1  1980 Chivenor      NA    NA                    NA 
-##  2  1981 Chivenor      NA    NA                   179.
-##  3  1982 Chivenor      NA    NA                   148.
-##  4  1983 Chivenor      NA    NA                   117.
-##  5  1984 Chivenor      NA    NA                   164 
-##  6  1985 Chivenor      NA    NA                   134 
-##  7  1986 Chivenor      NA    NA                   146.
-##  8  1987 Chivenor      20.4   0.3                 164.
-##  9  1988 Chivenor      19.6   3.2                 159 
-## 10  1989 Chivenor      23.1   2.8                 140 
+## # Groups:   year, station_name [44]
+##     year station_name  high   low total_rainfall
+##    &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+##  1  1980 Chivenor      NA    NA             446 
+##  2  1981 Chivenor      NA    NA             954.
+##  3  1982 Chivenor      NA    NA             971.
+##  4  1983 Chivenor      NA    NA             833.
+##  5  1984 Chivenor      NA    NA             878.
+##  6  1985 Chivenor      NA    NA             863.
+##  7  1986 Chivenor      NA    NA             924.
+##  8  1987 Chivenor      20.4   0.3           808.
+##  9  1988 Chivenor      19.6   3.2           964.
+## 10  1989 Chivenor      23.1   2.8           863.
 ## # ℹ 34 more rows</code></pre>
 <p>Chivenor doesnt have any data for 1978 and 1979, and has no temp
 readings for years between 1980 and 1986. Remove data for this station
@@ -525,15 +528,15 @@ ggplot(data = annual_station) +
 write.csv(annual_station, &quot;annual_station_summary.csv&quot;, row.names=FALSE)
 head(annual_station)</code></pre>
 <pre><code>## # A tibble: 6 × 5
-## # Groups:   year [1]
-##    year station_name         high   low max_monthly_rainfall
-##   &lt;dbl&gt; &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;                &lt;dbl&gt;
-## 1  1978 Aberporth            16.3   1.5                 140 
-## 2  1978 Armagh               18.1   0.4                 166 
-## 3  1978 Ballypatrick Forest  15.6   0.5                  NA 
-## 4  1978 Bradford             17.7  -0.9                 195.
-## 5  1978 Braemar              16.6  -8.4                 191 
-## 6  1978 Camborne             17.5   5                   277.</code></pre>
+## # Groups:   year, station_name [6]
+##    year station_name         high   low total_rainfall
+##   &lt;dbl&gt; &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1  1978 Aberporth            16.3   1.5           735.
+## 2  1978 Armagh               18.1   0.4           774.
+## 3  1978 Ballypatrick Forest  15.6   0.5             0 
+## 4  1978 Bradford             17.7  -0.9           870.
+## 5  1978 Braemar              16.6  -8.4           924.
+## 6  1978 Camborne             17.5   5             380.</code></pre>
 </div>
 </div>
 
