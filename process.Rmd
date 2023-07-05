@@ -26,6 +26,7 @@ head(data)
 # Process the data
 
 ## Seasonal temperatures by year
+
 Summarise the data to create a dataset containing seasonal high, low, average max and average min temperature across all weather stations by year.
 
 ```{r seasonal data, errors=FALSE}
@@ -52,10 +53,11 @@ seasonal <- data %>%
 seasonal <- na.omit(seasonal)
 
 # Save
-write.csv(seasonal, "seasonal.csv", row.names=FALSE)
+write.csv(seasonal, "seasonal_summary.csv", row.names=FALSE)
 head(seasonal)
 ```
-## Seasonal temperatures by year
+## Annual temperatures by station
+
 Summarise the data to create a dataset containing annual high, low and highest monthly rainfall by station by year.
 
 ```{r annual station data, errors=FALSE}
@@ -65,7 +67,86 @@ annual_station <- data %>%
   summarise(high = max(max_temp), low = min(min_temp), max_monthly_rainfall = max(rainfall)) %>%
   arrange(year, station_name)
 
+head(annual_station)
+```
+
+Different stations have different data start dates. Some also closed prior to 2023. We need to make these consistent as to not affect the mean calculations and remove stations that closed prior to 2023. 
+
+Find the latest first year for all stations.
+
+```{r get last first year}
+first_years <- annual_station %>% 
+  group_by(station_name) %>% 
+  summarise(first_year = min(year)) %>% 
+  arrange(station_name)
+
+max(first_years$first_year)
+```
+
+Remove rows before 1978
+
+```{r remove early data}
+annual_station <- annual_station %>% 
+  filter(year >= 1978)
+
+head(annual_station)
+```
+
+Get stations that closed prior ro 2023.
+
+```{r get last years}
+last_years <- annual_station %>% 
+  group_by(station_name) %>% 
+  summarise(last_year = max(year)) %>% 
+  arrange(station_name)
+
+last_years %>% 
+  filter(last_year < 2023)
+```
+
+Remove them
+
+```{r remove closed stations}
+annual_station <- annual_station %>% 
+  filter(!station_name %in% c('Cwmystwyth', 'Ringway', 'Southampton'))
+```
+
+We should now have a consistent number of years for every station. Check.
+
+```{r check distribution}
+ggplot(data = annual_station) +
+  geom_bar(mapping = aes(x = station_name)) +
+  labs(title="Distribution of Years by Station", 
+       y = "# Years") +
+  scale_x_discrete(name ="Station", limits=unique(annual_station$station_name)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+```
+
+We have an inconsistent number of years Chivenor. Check year.
+
+```{r inspect Chivenor}
+annual_station %>% 
+  filter(station_name == 'Chivenor')
+```
+
+Chivenor doesnt have any data for 1978 and 1979, and has no temp readings for years between 1980 and 1986. Remove data for this station and reinspect distribution.
+
+```{r remove Chivenor}
+annual_station <- annual_station %>% 
+  filter(station_name != 'Chivenor')
+
+ggplot(data = annual_station) +
+  geom_bar(mapping = aes(x = station_name)) +
+  labs(title="Distribution of Years by Station", 
+       y = "# Years") +
+  scale_x_discrete(name ="Station", limits=unique(annual_station$station_name)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+```
+
+Looks good. Save the data.
+
+```{r save annual station summary}
 # Save
-write.csv(annual_station, "annual_station.csv", row.names=FALSE)
+write.csv(annual_station, "annual_station_summary.csv", row.names=FALSE)
 head(annual_station)
 ```
