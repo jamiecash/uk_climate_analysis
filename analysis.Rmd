@@ -1,0 +1,245 @@
+---
+title: "Appendix III - Analyse the Data"
+author: "Jamie Cash"
+date: "2023-07-06"
+output: html_document
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE) 
+```
+
+```{r load packages, include=FALSE}
+# For plotting on UK map
+library("cowplot")
+library("googleway")
+library("ggrepel")
+library("ggspatial")
+library("sf")
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+library("tidyverse")
+
+# For rolling average against dataset with NAs
+library("zoo")
+```
+
+# Load the processed data
+
+Weather station data provided by the MET office is provided on their website in txt files. This data was [prepared](prepare.html) and [processed](process.html) to create two summary datasets: [seasonal temperatures by year](seasonal_summary.csv); and [annual temperatures by station](annual_station_summary.csv). Load these datasets.
+
+```{r load seasonal, errors=FALSE}
+seasonal <- read.csv('seasonal_summary.csv')
+head(seasonal)
+```
+```{r load station, errors=FALSE}
+station <- read.csv('annual_station_summary.csv')
+head(station)
+```
+# Add calculations
+
+Add mean and rolling mean to station data.
+
+```{r add rolling means}
+# Calculate means, rolling means and deltas.  We only need 2022 after calculation so 
+# filter.
+station_means_2022 <- station %>% 
+  group_by(station_name) %>% 
+  arrange(year) %>% 
+  mutate(
+      high_mean=mean(high, na.rm=TRUE),
+      low_mean=mean(low, na.rm=TRUE),
+      rainfall_mean=mean(total_rainfall, na.rm=TRUE),
+      high_5yr_roll=rollapplyr(high, 5, partial=TRUE, fill=NA, FUN=function(x) mean(x, na.rm=TRUE)),
+      low_5yr_roll=rollapplyr(low, 5, partial=TRUE, fill=NA, FUN=function(x) mean(x, na.rm=TRUE)),
+      rainfall_5yr_roll=rollapplyr(total_rainfall, 5, partial=TRUE, fill=NA, FUN=function(x) mean(x, na.rm=TRUE)),
+      high_delta=high_5yr_roll-high_mean,
+      low_delta=low_5yr_roll-low_mean,
+      rainfall_delta=rainfall_5yr_roll-rainfall_mean
+    ) %>% 
+  filter(year==2022)
+
+head(station_means_2022) 
+```
+
+# Create map to plot data against
+
+```{r create UK map}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+uk_map <- ggplot(data = world) +
+    geom_sf() +
+    xlab("Longitude") + 
+    ylab("Latitude") +
+    coord_sf(xlim = c(2, -11), ylim = c(49, 59), expand = FALSE)
+
+uk_map
+```
+
+# Answer the questions
+
+## Have the seasons shifted?
+
+* Is the average highest temperature for December, January and February across all UK locations for the last 5 years higher than the  historical average?
+
+### Historical mean of winter highs
+
+```{r winter highs - mean}
+# Get mean
+seasonal %>% 
+  filter(season == 'Winter') %>% 
+  summarise(mean_high = mean(high))
+```
+
+### 5 year mean of winter highs
+
+```{r winter highs - 5 yr mean}
+# Get 5 year mean. Exclude 2023 as we don't have December 2023 data.
+seasonal %>% 
+  filter(season == 'Winter') %>% 
+  filter(between(year, 2018, 2022 )) %>% 
+  summarise(mean_high = mean(high))
+```
+
+### Chart
+
+```{r winter highs - chart}
+plot <- seasonal %>%
+  filter(season=="Winter") %>% 
+  ggplot(aes(x=year, y=high)) +
+  geom_point(color='darkgray') +
+  geom_smooth() +
+  labs(title="Winter Highs by Year", x="Year", y="Temperature (c)") +
+  geom_text(x = 1900, y = 9.86, label = "Mean=9.86") + 
+  geom_text(x = 2000, y = 11.54, label = "2018-2022 Mean = 11.54")
+
+ggsave("winter_highs.png", plot)
+
+plot
+```
+
+* Is the average lowest temperature for March, April and May across all UK locations for the last 5 years lower than the  historical average?
+
+### Historical mean of spring lows
+
+```{r spring lows - mean}
+# Get mean
+seasonal %>% 
+  filter(season == 'Spring') %>% 
+  summarise(mean_low = mean(low))
+```
+
+### 5 year mean of spring lows
+
+```{r spring lows - 5 yr mean}
+# Get 5 year mean. Exclude 2023 as we don't have December 2023 data.
+seasonal %>% 
+  filter(season == 'Spring') %>% 
+  filter(between(year, 2018, 2022 )) %>% 
+  summarise(mean_low = mean(low))
+```
+
+### Chart
+
+```{r spring lows - chart}
+plot <- seasonal %>%
+  filter(season=="Spring") %>% 
+  ggplot(aes(x=year, y=low)) +
+  geom_point(color='darkgray') +
+  geom_smooth() +
+  labs(title="Spring Lows by Year", x="Year", y="Temperature (c)") +
+  geom_text(x = 1900, y = -0.04, label = "Mean=-0.04") + 
+  geom_text(x = 2000, y = -1.2, label = "2018-2022 Mean=-1.2")
+
+ggsave("spring_lows.png", plot)
+
+plot
+```
+
+## Are we gettig higher temperature peaks?
+
+* For each location, is the average highest annual temperature over the last 5 years higher than the historical average?
+
+Get the min and max values for the scale.
+
+```{r min and max high delta}
+min(station_means_2022$high_delta)
+max(station_means_2022$high_delta)
+```
+Plot the deltas on the chart. Scale should be even. We will use -2 to 2 as 1.9 
+is the max.
+
+```{r temperature high deltas map}
+high_delta_map <- uk_map +
+  geom_point(data = station_means_2022, 
+             mapping = aes(x=station_long, y=station_lat, colour=high_delta, 
+                           size=high_delta)) +
+  scale_colour_gradient(low="blue", high="red", limits = c(-2,2)) +
+  labs(title="High Temperature Change", 
+       subtitle="Delta between average 5 year high and average high since 1978")
+
+ggsave("station_high_deltas.png", high_delta_map)
+
+high_delta_map
+```
+
+## Are we getting lower temperature dips?
+
+* For each location, is the average lowest annual temperature over the last 5 years lower than the historical average?
+
+Plot the deltas on the chart. Scale should the same as the previous chart for consistency.
+
+Get the min and max values for the report.
+
+```{r min and max low delta}
+min(station_means_2022$low_delta)
+max(station_means_2022$low_delta)
+```
+Some stations have a lower low. Which ones? We will include these in the report.
+
+```{r stations with lower low}
+station_means_2022 %>% filter(low_delta <=0)
+```
+
+```{r temperature low deltas map}
+low_delta_map <- uk_map +
+  geom_point(data = station_means_2022, 
+             mapping = aes(x=station_long, y=station_lat, colour=low_delta, 
+                           size=low_delta)) +
+  scale_colour_gradient(low="blue", high="red", limits = c(-2,2)) +
+  labs(title="Low Temperature Change", 
+       subtitle="Delta between average 5 year low and average low since 1978")
+
+ggsave("station_low_deltas.png", low_delta_map)
+
+low_delta_map
+```
+
+## Are we getting more or less rainfall?
+
+* For each location, is the average yearly rainfall for the last 5 years lower or higher than the historical average?
+
+Get the min and max values for the scale.
+
+```{r min and max rainfall delta}
+min(station_means_2022$rainfall_delta)
+max(station_means_2022$rainfall_delta)
+```
+
+Plot the deltas on the chart. Scale should be even. We will use -300 to 300 as highest delta is 292.
+
+```{r rainfall deltas map}
+rainfall_delta_map <- uk_map +
+  geom_point(data = station_means_2022, mapping = 
+               aes(x=station_long, y=station_lat, colour=rainfall_delta, 
+                   size=rainfall_delta)) +
+  scale_colour_gradient(low="brown", high="green", limits = c(-300,300)) +
+  labs(title="Rainfall Change", 
+       subtitle="Delta between average 5 year rainfall and average high since 1978")
+
+ggsave("station_rainfall_deltas.png", rainfall_delta_map)
+
+rainfall_delta_map
+```
+
