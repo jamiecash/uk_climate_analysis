@@ -15,6 +15,7 @@ library("rvest")
 library("tidyverse")
 ```
 
+
 # Retrieve the data
 
 Weather station data provided by the MET office is provided on their website in txt files. Weather station names and the URL of the data for that station was collected from the MET office website.
@@ -32,22 +33,23 @@ station_data <- webpage %>% html_nodes(xpath = "//table//a") %>% html_attr("href
 table <- cbind(table, station_data)
 table <- subset(table, select = -c(Data))
 
-# Display sample of the weather station names and URL to data
-table %>% select(Name, station_data) %>% head()
+# Display sample of the weather station names,  URL to data and the long / lat info
+table %>% select(Name, station_data, Location) %>% head()
 ```
 The data for each station was retrieved and collated into a single dataframe.
 
 ```{r collate weather station data}
 # Create the dataframe
-columns <- c("year", "month", "max_temp", "min_temp", "rainfall", "station_name")
+columns <- c("year", "month", "max_temp", "min_temp", "rainfall", "station_name", "station_location")
 data <- data.frame(matrix(nrow = 0, ncol = length(columns))) 
 colnames(data) <- columns
 
 # Get data for all stations and append to data
 num_rows <- nrow(table)
 for (row in 1:num_rows) {
-  # Get the station name and URL of the stations data txt file
+  # Get the station name, location and URL of the stations data txt file
   name <- table[row, "Name"]
+  location <- table[row, "Location"]
   url <- table[row, "station_data"]
   
   # Check the text file to find where the header starts, then remove header row 
@@ -80,8 +82,9 @@ for (row in 1:num_rows) {
   colnames(station_data) <- 
     c("year", "month", "max_temp", "min_temp", "af_days", "rainfall", "sun_hours")
   
-  # Select only columns required for analysis and add station name
+  # Select only columns required for analysis and add station name and location
   station_data$station_name <- name
+  station_data$station_location <- location
   station_data <- station_data %>% select(all_of(columns))
   
   # Merge into main data frame
@@ -138,6 +141,7 @@ max(data$max_temp)
 ** No. We have some * values at the end of the number, null is represented by ---, and the datatype is string. **
 
 ### Steps to clean
+
 * Remove '*'s
 * Convert '---' to null
 * Convert column to numeric type
@@ -183,6 +187,7 @@ max(data$min_temp)
 ** No. We have some * values at the end of the numbers, null is represented by ---, and the data type is string. **
 
 ### Steps to clean
+
 * Remove '*'s
 * Convert '---' to null
 * Convert column to numeric type
@@ -226,6 +231,7 @@ max(data$rainfall)
 ** No. We have some * values at the end of the numbers, null is represented by ---, and the data type is string. **
 
 ### Steps to clean
+
 * Remove '*'s
 * Convert '---' to null
 * Convert column to numeric type
@@ -274,6 +280,25 @@ ggplot(data = data) +
 
 **Yes. No further action required.**
 
+## Station Location
+
+* Are our values for station_location valid long / lat coordinates?
+
+Note: We are not expecting an even distribution due to different stations opening in different years.
+
+``` {r check station_location}
+
+# Plot a chart showing distribution across all station locations
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = station_location)) +
+  labs(title="Distribution of Weather Station Readings by Station Location", 
+       y = "# Readings") +
+  scale_x_discrete(name ="Station Location", limits=unique(data$station_location)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+```
+
+**Yes. No further action required.**
+
 ## Merge year and month.
 
 In order to plot timeframe data, it would be helpful to combine year and month into a date type.
@@ -289,16 +314,34 @@ data$year_month <- ymd(data$year_month)
 # Remove year and month
 data <- data %>% select(-c(year, month))
 
+head(data)
+```
+
+## Split out location
+
+To plot on a map, it will be helpful to split out long and lat.
+
+``` {r split location}
+# Split positions to longitude and latitude
+data <- data %>%
+  separate(station_location, c("station_long", "station_lat"), ", ")
+
+# Convert to double
+data$station_long <-  as.numeric(data$station_long)
+data$station_lat <-  as.numeric(data$station_lat)
+
+head(data)
 ```
 
 ## Reorder columns
 
 ``` {r final dataset}
-data <- data %>% select(c(station_name, year_month, min_temp, max_temp, rainfall))
+data <- data %>% select(c(station_name, station_long, station_lat, year_month, min_temp, max_temp, rainfall))
 ```
 
 ## Save prepared data
+
 ``` {r save data}
 write.csv(data, "met_station_readings.csv", row.names=FALSE)
-data
+head(data)
 ```

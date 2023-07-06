@@ -19,7 +19,7 @@ Weather station data provided by the MET office is provided on their website in 
 
 ```{r load data, errors=FALSE}
 data <- read.csv('met_station_readings.csv', colClasses = 
-                   c("character", "Date", "numeric", "numeric", "numeric"))
+                   c("character", "numeric", "numeric", "Date", "numeric", "numeric", "numeric"))
 head(data)
 ```
 
@@ -65,7 +65,7 @@ Summarise the data to create a dataset containing annual high, low and total rai
 ```{r annual station data, errors=FALSE}
 # Group data by year and station and compute summary columns
 annual_station <- data %>%
-  group_by(year, station_name) %>%
+  group_by(year, station_name, station_long, station_lat) %>%
   summarise(high = max(max_temp), low = min(min_temp), 
             total_rainfall = sum(rainfall, na.rm=TRUE), .groups='keep') %>%
   arrange(year, station_name)
