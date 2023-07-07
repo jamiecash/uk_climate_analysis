@@ -43,12 +43,12 @@ In order to determine how the climate has changed in the UK, this report analyse
 
 # Conclusion
 
-The seasons are shifting with the average winter temperature over the last 5 years 1.68$^\circ$c higher than the average winter temperature across all years since 1865, and the average spring lowest temperature -1.16$^\circ$c lower for the same period.
+The seasons are shifting with the average winter temperature trending higher and the average spring temperatures trending lower. Although there are instances of recent cold winters and hot springs, the trend lines crossed their averages around 1945 for winter and 1910 for spring and the rate of change is increasing.
 
 ![Winter Average Highest Temperatures](winter_highs.png)
 ![Spring Average Lowest Temperatures](spring_lows.png)
 
-All regions in the UK are getting hotter. The highest average daily temperatures for each year have increased between 0.39$^\circ$c and 1.9$^\circ$c across all regions when comparing the last 5 years to all years since 1978. We are also getting hotter coldest  days, with the lowest average daily temperatures for each year having decreased across all weather stations except for Stornaway Airport.
+All regions in the UK are getting hotter. The highest average daily temperatures have increased across all regions when comparing the last 5 years to all years since 1978. We are also getting warmer coldest days, but not to the same extent, with the lowest average daily temperatures increasing marginally across all regions with the exception of Stornaway Airport.
 
 ![Highest Averages by Station](station_high_deltas.png)
 ![Lowest Averages by Station](station_low_deltas.png)
