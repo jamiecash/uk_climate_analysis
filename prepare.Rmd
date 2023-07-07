@@ -2,7 +2,9 @@
 title: "Appendix I - Prepare the Data"
 author: "Jamie Cash"
 date: "2023-07-04"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE} 
